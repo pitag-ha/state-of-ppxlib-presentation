@@ -1,0 +1,282 @@
+\title{Meta-programming in OCaml\\ \large{Ppxlib: How We Got Here and\\Where We Are Now}}
+
+\author{Paul-Elliot Anglès d'Auriac (?), Carl Eastlund, Sonja Heinze}
+
+\newcommand{\abstractText}{\noindent
+About nine years ago, the OCaml community let go of the "maintenance hell" of source code meta-programming (Camlp4/5). Since then, meta-programming is mostly done on the parsetree and has incrementally evolved into a solid ecosystem, enriching the OCaml developer experience. Two highlights of that evolvement: introducing parsetree migrations to gain individual cross-compiler compatibility (OMP); and orchestrating those migrations to create an up-to-date ecosystem with clear composition semantics and good performance (ppxlib).
+
+In this talk, we outline the mentioned evolvement and explain the remaining challenges, i.e. creating a good higienic meta-programming culture and offering the best in terms of stability.
+}
+
+
+%%%%%%%%%%%%%%%%%
+% Configuration %
+%%%%%%%%%%%%%%%%%
+
+\documentclass[10pt, a4paper, twocolumn]{article}
+\usepackage{xurl}
+\usepackage[super,comma,sort&compress]{natbib}
+\usepackage{abstract}
+\renewcommand{\abstractnamefont}{\normalfont\bfseries}
+\renewcommand{\abstracttextfont}{\normalfont\small\itshape}
+\usepackage{amsmath}
+\usepackage[framemethod=TikZ]{mdframed}
+\usepackage{hyperref}
+
+\newcounter{example}[section]\setcounter{example}{0}
+\renewcommand{\theexample}{\arabic{section}.\arabic{example}}
+\newenvironment{example}[2][]{%
+%\refstepcounter{example}%
+\ifstrempty{#1}%
+{\mdfsetup{%
+frametitle={%
+\tikz[baseline=(current bounding box.east),outer sep=0pt]
+\node[anchor=east,rectangle,fill=blue!20]
+{\strut Example~\theexample};}}
+}%
+{\mdfsetup{%
+frametitle={%
+\tikz[baseline=(current bounding box.east),outer sep=0pt]
+\node[anchor=east,rectangle,fill=blue!20]
+{\strut Example:~#1};}}%
+}%
+\mdfsetup{innertopmargin=10pt,linecolor=blue!20,%
+linewidth=2pt,topline=true,%
+frametitleaboveskip=\dimexpr-\ht\strutbox\relax
+}
+\begin{mdframed}[]\relax%
+\label{#2}}{\end{mdframed}}
+
+
+%%%%%%%%%%%%%%
+% References %
+%%%%%%%%%%%%%%
+
+% If changing the name of the bib file, change \bibliography{test} at the bottom
+\begin{filecontents}{references.bib}
+
+\end{filecontents}
+
+% Any configuration that should be done before the end of the preamble:
+\usepackage{hyperref}
+\hypersetup{colorlinks=true, urlcolor=blue, linkcolor=blue, citecolor=blue}
+
+\begin{document}
+
+%%%%%%%%%%%%
+% Abstract %
+%%%%%%%%%%%%
+
+\twocolumn[
+  \begin{@twocolumnfalse}
+    \maketitle
+    \begin{abstract}
+      \abstractText
+      \newline
+      \newline
+    \end{abstract}
+  \end{@twocolumnfalse}
+]
+
+%%%%%%%%%%%
+% Article %
+%%%%%%%%%%%
+
+\section{Introduction}
+Meta-programming enhances the programming language experience by opening the door to features such as boilerplate generation, conditional compilation, domain-specific syntax extensions, or generated file inclusion. It can be done on any representation of the program.
+
+As a statically typed language, OCaml successively constructs two in-memory representations of the raw representation, i.e. the source-code.
+
+\begin{align*}
+source \xrightarrow{\text{parsing}} parsetree \xrightarrow{\text{typing}} typedtree
+\end{align*}
+
+Nowadays, the clear standard for OCaml meta-programming is parsetree focused and is done via a compiler-external package called $ppxlib$. As of today, $\sim2000$ OCaml packages out of $\sim4200$ OCaml packages in total (on $opam$) depend transitively on $ppxlib$.
+
+\section{Historic overview}
+
+On the way to that standard, we've had a long history of OCaml meta-programming facilities.
+
+
+\subsection{Source-code based}
+
+The initial approach was source-code focused. It worked by extending the parser to one's needs \cite{camlp4}:
+
+\begin{align*}
+source \xrightarrow[\text{parsing}]{\text{extended}} parsetree \xrightarrow{\text{typing}} typedtree
+\end{align*}
+
+Among many other problems, maintaining that parallel parser with extensible grammar was a huge maintenance burden.
+
+
+\subsection{Parsetree based}
+
+That's why in 2014 the approach became parsetree (\emph{AST} from now on) focused with $ocaml.4.02.00$. The AST was augmented by two meta-programming dedicated nodes \cite{extension_nodes}\cite{attributes}. Meta-programming tools, called PPXs, extend those nodes to other nodes:
+
+\begin{gather*}
+source \xrightarrow{\text{parsing}} AST \xrightarrow{\text{PPXs}}\\
+\rightarrow expanded\ AST\xrightarrow{\text{typing}} typedtree
+\end{gather*}
+
+To extend the nodes, PPXs need to manipulate the AST data type. Given that that data type is modified between different compiler versions, a PPX was tied to one compiler version (is that true, Carl? Or were there other workarounds before OMP?).
+
+To gain cross-compiler compatibility, $ocaml\mbox{-}migrate\mbox{-}parsetree$ (OMP)\cite{omp} was invented. It converts the compiler AST version to the version used by the PPX, then applies the PPX, and then converts back. However, downward conversions are only well-defined if the AST doesn't contain new features/nodes. So full cross-compiler compatibility is only given if
+\begin{align*}
+\text{PPX\ AST\ version} >= \text{compiler\ AST\ version}
+\end{align*}
+That meant that the OCaml PPX world started to lag behind the compiler releases.
+
+Furthermore, each PPX was a separate and isolated binary; with one exception: for type derivers, there was $ppx \_ deriving$, which would orchestrate the different derivers.
+
+In 2018, $ppxlib$\cite{ppxlib} was invented to solve both problems and bring more benefits (pointed out \hyperref[benefits]{below}). It exposes one fixed AST, which all OCaml PPXs are defined against. It coordinates with the compiler releases to bump that AST version in parallel. That's how it has consolidated a PPX ecosystem, which stays up-to-date.
+
+The main problem in terms of the consolidated ecosystem is that bumping the AST breaks a few PPXs each time. To solve that situation, there was the idea to abstract the AST exposed by $ppxlib$ and keep that one stable. That idea was presented at the OCaml workshop 2019\cite{workshop2019}. However, the idea involved too much complexity and was abandoned. We now have other means to approach the stability problem, pointed out \hyperref[stability]{below}.
+ 
+
+\subsection{Typedtree based}
+
+There have also been efforts to introduce typedtree based meta-programming: $MetaOCaml$\cite{metaocaml}. It's been a very valuable experience and might still become more some day.
+%A nice feature of typedtree-based meta-programming is that the typing of the generated code is checked at the time of writing the meta-program. It comes at the cost of having to deal with two unstable representations instead of one: both the parsetree and the typedtree.
+%(ToDo: I'll ask Olivier if this paragraph is correct and sounds good to the MetaOCaml folks)
+
+\section{Current Situation}
+
+The standard for meta-programming, $ppxlib$, provides very powerful machinery.
+%The $ppxlib$ library allows to do general parsetree analysis, (de)-construction and manipulation. The most common use case is to register parsetree transformations via $ppxlib$'s library to $ppxlib$'s driver. The driver is one binary that orchestrates all registered transformations (PPXs). It's possible to define and register semantically quite complex transformations. However, it's most common and most recommended to stick to local/context-free transformations of one node.
+However, the most common and usually most recommended workflow is to write context-free transformations and to register those transformations via $ppxlib$'s library to $ppxlib$'s driver. The driver is one binary that orchestrates all registered transformations (PPXs). A context-free transformation locally transforms one node, isolated from its semantic context.
+
+\vspace{20pt}
+
+(visualization)
+
+\vspace{25pt}
+
+Context-free transformations have three big advantages:
+\begin{enumerate}
+\item\hypertarget{benefits} Among all context-free transformations, we have clear composition semantics: $ppxlib$'s driver merges all context-free transformations into one single AST traversal and applies each transformation successively.
+\item The just mentioned merge considerably improves performance.
+\item\label{responsibility} A context-free transformation is easy to reason about and doesn't mess with its context.
+\end{enumerate}
+
+\subsection{Hygiene}
+
+Point \ref{responsibility}. above touches on an important topic: PPXs generate the final representation of the program and so have an impact on how the compiler and the editor tool $merlin$ analyze the program. That's why we define clear hygienic rules\cite{hygiene} and try to create a culture in which PPX authors are aware of the possible consequences.
+
+\subsubsection*{Error handling}
+
+It's important to handle PPX errors at the level of the AST abstraction. Concretely, errors need to be embedded as nodes into the AST. A raising PPX means that the compiler and $merlin$ don't receive an expanded AST.
+%and won't be able to reason about the whole program.
+
+\subsubsection*{Location invariants}
+
+The \emph{Location} of a AST node reveals which part of the source code the node corresponds to.
+%Locations are very important for the compiler/$merlin$ to point to the right place when reporting errors/warnings.
+There are two location invariants, which PPXs need to respect:
+\begin{itemize}
+\item Parent-child nodes are nested wrt. locations.
+\item The locations of sibling nodes don't overlap.
+\end{itemize}
+
+\subsubsection*{Full qualification of identifiers and operators}
+
+A PPX needs to be independent of the semantic context it's applied in.
+
+\begin{example}[Non-qualified identifier]{example:non-qualified}
+Suppose you have a PPX which injects code containing
+\begin{verbatim}
+compare x y
+\end{verbatim}
+Then the result of that comparison depends on whether $Stdlib$'s $compare$ is shadowed inside the context the PPX is applied in or not.
+\end{example}
+\begin{example}[Fully qualified identifier]{example:non-qualified}
+Now suppose your PPX instead fully qualifies:
+\begin{verbatim}
+Stdlib.compare x y
+\end{verbatim}
+Then the result is deterministic (we assume people don't shadow the $Stdlib$).
+\end{example}
+
+If your PPX relies on values/modules/operators that don't form part of the $Stdlib$, you can make use of PPX runtime modules.
+
+%\subsubsection{Quoting of injected values}
+%
+%(What do you think Carl and Paul-Elliot? Should we also mention quoting here?)
+
+\subsection{Stability}\label{stability}
+
+Additionally to being hygienic, we also want our PPX ecosystem to stay consolidated and up-to-date. The problem: when a new compiler with its new AST version is released and $ppxlib$ bumps its exposed AST to the new version, there are a few PPXs that break. We have two strategies here.
+
+\subsubsection*{Reduce the number of breakages}
+
+There are different ways to (de-)construct the AST. A very low-level approach is to handle the original data type directly. That workflow is clearly unstable by the unstable AST nature. A very high-level approach is to use the PPX $metaquot$, which comes bundled with $ppxlib$. It lets you (de-)construct nodes by writing the corresponding OCaml syntax. That's stable due to the OCaml syntax being backward compatible. An intermediate approach is to use helper modules called $Ast\_builder$ and $Ast\_pattern$. That used to be unstable since the modules are automatically generated. Good news: since $ppxlib.0.26.0 $ (2022), we keep them manually stable!
+
+%helper modules called $Ast\_builder$ and $Ast\_pattern$
+%
+%, such as:
+%\begin{enumerate}
+%\item\label{direct} Very low-level: directly handling the original data type.
+%\item\label{helpers} More high-level: using helper modules called $Ast\_builder$ and $Ast\_pattern$.
+%\item\label{metaquot} High-level: using the PPX $metaquot$ that comes bundled with $ppxlib$ and (de-)constructs nodes by writing original OCaml syntax.
+%\end{enumerate}
+%
+%\ref{direct}. is unstable by the unstable parsetree nature. \ref{metaquot}. is stable due to the OCaml syntax being backward compatible. And \ref{helpers}. used to be unstable due to being automatically generated; however, since $ppxlib.0.26.0 $ (2022), we keep them manually stable. When possible, we recommend avoiding \ref{direct}.
+
+\subsubsection*{Patch each PPX in case of breakage}
+
+Even with that, there are still a few PPXs that break. Therefore, when bumping the AST, we create a big workspace containing all PPXs released on $opam$ (fulfilling a few standards), called the $ppx\_universe$\cite{universe}. We then quickly patch the broken PPXs in the universe and open PRs. The few affected PPX maintainers only need to review, merge and release.
+
+%%%%%%%%%%%%%%
+% References %
+%%%%%%%%%%%%%%
+
+\nocite{*}
+\bibliographystyle{plain}
+\bibliography{references}
+
+\end{document}
+
+\documentclass[12pt, a4paper, twocolumn]{article}
+\usepackage{xurl}
+\usepackage[super,comma,sort&compress]{natbib}
+\usepackage{abstract}
+\renewcommand{\abstractnamefont}{\normalfont\bfseries}
+\renewcommand{\abstracttextfont}{\normalfont\small\itshape}
+\usepackage{lipsum}
+
+%%%%%%%%%%%%%%
+% References %
+%%%%%%%%%%%%%%
+
+% If changing the name of the bib file, change \bibliography{test} at the bottom
+\begin{filecontents}{references.bib}
+
+@misc{camlp4,
+  title        = "Link Title",
+  author       = "Link Creator(s)",
+  howpublished = "\url{https://example.com/}",
+}
+
+@misc{Author1,
+  author       = "LastName, FirstName",
+  howpublished = "\url{mailto:email@example.com}",
+}
+
+@article{ArticleReference1,
+  author  = "Lastname1, Firstname1 and Lastname2, Firstname2",
+  title   = "Article title",
+  year    = "Year",
+  journal = "Journal name",
+  note    = "\url{https://dx.doi.org/...}",
+}
+
+\end{filecontents}
+
+% Any configuration that should be done before the end of the preamble:
+\usepackage{hyperref}
+\hypersetup{colorlinks=true, urlcolor=blue, linkcolor=blue, citecolor=blue}
+
+\nocite{*}
+\bibliographystyle{plain}
+\bibliography{test}
+
+\end{document}
