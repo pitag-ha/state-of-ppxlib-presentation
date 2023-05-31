@@ -171,30 +171,22 @@ technical and social solutions.
 
 \subsection{Typedtree based}
 
-There have also been efforts to introduce typedtree based meta-programming:
-$MetaOCaml$\cite{metaocaml}. It's been a very valuable experience and might
-still become more some day.
-%A nice feature of typedtree-based meta-programming is that the typing of the
-%generated code is checked at the time of writing the meta-program. It comes at
-%the cost of having to deal with two unstable representations instead of one:
-%both the parsetree and the typedtree. (ToDo: I'll ask Olivier if this paragraph
-%is correct and sounds good to the MetaOCaml folks)
+There have also been efforts to introduce typedtree based meta-programming,
+especially $MetaOCaml$\cite{metaocaml}. MetaOCaml and PPXes are different
+notions of metaprogramming with different goals and expressivity. MetaOCaml is
+type-safe, staged metaprogramming that can be used to specialize values at
+compile-time or run-time. PPXes offer more general code generation than
+specializing values, but lack MetaOCaml's ability to evaluate the code and its
+integration with the type system.
 
 \section{Current Situation}
 
-The standard for meta-programming, $ppxlib$, provides very powerful machinery.
-%The $ppxlib$ library allows to do general parsetree analysis, (de)-construction
-%and manipulation. The most common use case is to register parsetree
-%transformations via $ppxlib$'s library to $ppxlib$'s driver. The driver is one
-%binary that orchestrates all registered transformations (PPXs). It's possible
-%to define and register semantically quite complex transformations. However,
-%it's most common and most recommended to stick to local/context-free
-%transformations of one node.
-However, the most common and usually most recommended workflow is to write
-context-free transformations and to register those transformations via
-$ppxlib$'s library to $ppxlib$'s driver. The driver is one binary that
-orchestrates all registered transformations (PPXs). A context-free
-transformation locally transforms one node, isolated from its semantic context.
+PPX machinery and the $ppxlib$ library have become the standard tool for OCaml
+meta-programming. They allow arbitrary AST rewriting in general, and streamlined
+special cases for context-free rewriting at extension nodes as well as derived
+code at types and module type definitions. The deriver links together multiple
+rewriters into one binary, executing all derivers and context-free rewriting in
+a single pass over an AST.
 
 \vspace{20pt}
 
