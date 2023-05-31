@@ -236,37 +236,52 @@ node so that the rest of the program can be transformed.
 \subsubsection*{Location invariants}
 
 The \emph{Location} of a AST node reveals which part of the source code the node
-corresponds to.
+corresponds to. We've run into some problems with transformed code, wherein
+tools like $merlin$ cannot figure out which piece of transformed or duplicated
+code to analyze when the user queries the source program.
 %Locations are very important for the compiler/$merlin$ to point to the right
 %place when reporting errors/warnings.
-There are two location invariants, which PPXs need to respect:
+
+To resolve this issue, we've instituted two location invariants for the results
+of PPX transformations. These can be configured in the $ppxlib$ driver as
+automatic checks, or left to PPX authors to enforce.
 \begin{itemize}
-\item Parent-child nodes are nested wrt. locations.
+\item The locations of child nodes are contained by the locations of their parents.
 \item The locations of sibling nodes don't overlap.
 \end{itemize}
 
 \subsubsection*{Full qualification of identifiers and operators}
 
-A PPX needs to be independent of the semantic context it's applied in.
+A PPX needs to be independent of the semantic context it's applied in. This
+property has no enforcement; it is the job of PPX authors to observe it so that
+their transformations are robust.
 
 \begin{example}[Non-qualified identifier]{example:non-qualified}
 Suppose you have a PPX which injects code containing
 \begin{verbatim}
 compare x y
 \end{verbatim}
-Then the result of that comparison depends on whether $Stdlib$'s $compare$ is
-shadowed inside the context the PPX is applied in or not.
+Then the result of that comparison depends on
+whether \texttt{Stdlib}'s \texttt{compare} is shadowed inside the context the
+PPX is applied in or not.
 \end{example}
 \begin{example}[Fully qualified identifier]{example:non-qualified}
 Now suppose your PPX instead fully qualifies:
 \begin{verbatim}
 Stdlib.compare x y
 \end{verbatim}
-Then the result is deterministic (we assume people don't shadow the $Stdlib$).
+Then the result is deterministic (we assume people don't shadow
+the \texttt{Stdlib}).
 \end{example}
 
-If your PPX relies on values/modules/operators that don't form part of the
-$Stdlib$, you can make use of PPX runtime modules.
+If your PPX relies on definitions that don't form part of the \texttt{Stdlib},
+the standard practice is to mint a runtime module for your PPX, give it an
+explicit name such as \texttt{Ppx\_example\_runtime\_lib}.
+
+This property can be selectively ignored to create a deliberately non-hygienic
+interface. For example, the $ppx \_ expect$ PPX uses the name
+\texttt{Expect\_test\_config} non-hygienically. Users may shadow this module
+name to reconfigure expect tests.
 
 %\subsubsection{Quoting of injected values}
 %
@@ -287,9 +302,9 @@ the unstable AST nature. A very high-level approach is to use the PPX
 $metaquot$, which comes bundled with $ppxlib$. It lets you (de-)construct nodes
 by writing the corresponding OCaml syntax. That's stable due to the OCaml syntax
 being backward compatible. An intermediate approach is to use helper modules
-called $Ast\_builder$ and $Ast\_pattern$. That used to be unstable since the
-modules are automatically generated. Good news: since $ppxlib.0.26.0 $ (2022),
-we keep them manually stable!
+called \texttt{Ast\_builder} and \texttt{Ast\_pattern}. That used to be unstable
+since the modules are automatically generated. Good news: since $ppxlib.0.26.0$
+(2022), we keep them manually stable!
 
 %helper modules called $Ast\_builder$ and $Ast\_pattern$
 %
