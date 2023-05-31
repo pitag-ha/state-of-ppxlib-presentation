@@ -7,7 +7,7 @@ About nine years ago, the OCaml community let go of the "maintenance hell" of
 source code meta-programming (Camlp4/5). Since then, meta-programming is mostly
 done on the parsetree and has incrementally evolved into a solid ecosystem,
 enriching the OCaml developer experience. Two highlights of that evolvement:
-introducing parsetree migrations to gain individual cross-compiler compatibility
+introducing parsetree migrations to gain individual cross-version compatibility
 (OMP); and orchestrating those migrations to create an up-to-date ecosystem with
 clear composition semantics and good performance (ppxlib).
 
@@ -138,38 +138,36 @@ source \xrightarrow{\text{parsing}} AST \xrightarrow{\text{PPXs}}\\
 \rightarrow expanded\ AST\xrightarrow{\text{typing}} typedtree
 \end{gather*}
 
-To extend the nodes, PPXs need to manipulate the AST data type. Given that that
-data type is modified between different compiler versions, a PPX was tied to one
-compiler version (is that true, Carl? Or were there other workarounds before
-OMP?).
+To extend the nodes, PPXs need to manipulate the AST data type. Changes to the
+AST data type would often break PPXes that depended on a previous form.
+% ceastlund: I don't know of earlier workarounds. I don't think _every_ ppx broke on
+% _every_ version, but the problem accelerated over time.
 
-To gain cross-compiler compatibility, $ocaml\mbox{-}migrate\mbox{-}parsetree$
+To improve cross-version compatibility, $ocaml\mbox{-}migrate\mbox{-}parsetree$
 (OMP)\cite{omp} was invented. It converts the compiler AST version to the
 version used by the PPX, then applies the PPX, and then converts back. However,
 downward conversions are only well-defined if the AST doesn't contain new
-features/nodes. So full cross-compiler compatibility is only given if
+features/nodes. So full cross-version compatibility is only given if
 \begin{align*}
 \text{PPX\ AST\ version} >= \text{compiler\ AST\ version}
 \end{align*}
 That meant that the OCaml PPX world started to lag behind the compiler releases.
 
-Furthermore, each PPX was a separate and isolated binary; with one exception:
-for type derivers, there was $ppx \_ deriving$, which would orchestrate the
-different derivers.
+Initially, each PPX was a separate binary. The one early exception was $ppx \_
+deriving$, which orchestrates multiple type-based derivers into a single
+rewriter.
 
-In 2018, $ppxlib$\cite{ppxlib} was invented to solve both problems and bring
-more benefits (pointed out \hyperref[benefits]{below}). It exposes one fixed
-AST, which all OCaml PPXs are defined against. It coordinates with the compiler
-releases to bump that AST version in parallel. That's how it has consolidated a
-PPX ecosystem, which stays up-to-date.
+In 2018, $ppxlib$\cite{ppxlib} was created, in part to solve these problems. It
+exposes a single version of the AST, which is kept up to date with the latest
+compiler and is backward-compatible with previous releases. This consolidates
+the PPX ecosystem and upgrades most PPXes ``for free''.
 
-The main problem in terms of the consolidated ecosystem is that bumping the AST
-breaks a few PPXs each time. To solve that situation, there was the idea to
-abstract the AST exposed by $ppxlib$ and keep that one stable. That idea was
-presented at the OCaml workshop 2019\cite{workshop2019}. However, the idea
-involved too much complexity and was abandoned. We now have other means to
-approach the stability problem, pointed out \hyperref[stability]{below}.
-
+The primary remaining problem is the few PPXes that get broken each time the AST
+changes. Our initial proposal, presented at the OCaml workshop
+2019\cite{workshop2019}, was to create a single AST that could contain fragments
+from multiple versions at once. This proved too complex and was subsequently
+abandoned. We now approach \hyperref[stability]{stability} with a combination of
+technical and social solutions.
 
 \subsection{Typedtree based}
 
