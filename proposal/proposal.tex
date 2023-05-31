@@ -194,19 +194,15 @@ a single pass over an AST.
 
 \vspace{25pt}
 
-Context-free transformations have three big advantages:
+Context-free transformations have three big advantages over more general rewriting:
 \begin{enumerate}
 
-\item\hypertarget{benefits}
-Among all context-free transformations, we have clear composition semantics:
-$ppxlib$'s driver merges all context-free transformations into one single AST
-traversal and applies each transformation successively.
+\item\hypertarget{benefits} They compose well together.
 
-\item The just mentioned merge considerably improves performance.
+\item Running in a single pass over a file is a significant performance win.
 
-\item\label{responsibility}
-A context-free transformation is easy to reason about and doesn't mess with its
-context.
+\item\label{responsibility} They are easier to reason-about than transformations
+that might affect, or be affected by, their context.
 
 \end{enumerate}
 
@@ -215,15 +211,27 @@ context.
 Point \ref{responsibility}. above touches on an important topic: PPXs generate
 the final representation of the program and so have an impact on how the
 compiler and the editor tool $merlin$ analyze the program. That's why we define
-clear hygienic rules\cite{hygiene} and try to create a culture in which PPX
-authors are aware of the possible consequences.
+clear hygiene rules\cite{hygiene} and try to create a culture in which PPX
+authors are aware of the possible consequences. Some of these hygiene rules are
+enforced technically by $ppxlib$, and others are currently only guidelines that
+PPX authors should follow. The PPX mechanism within the compiler itself does not
+enforce any technical notion of hygiene as in some macro
+systems\cite{scheme_hygiene}.
 
 \subsubsection*{Error handling}
 
-It's important to handle PPX errors at the level of the AST abstraction.
-Concretely, errors need to be embedded as nodes into the AST. A raising PPX
-means that the compiler and $merlin$ don't receive an expanded AST.
-%and won't be able to reason about the whole program.
+Errors in OCaml are most often handled by raising exceptions. Naive error
+handling within the $ppxlib$ driver would abort transformation of an entire
+program the first time an exception was raised. This means tools like $merlin$
+learn nothing about the shape of the transformed program, and debugging the
+problem becomes only more difficult.
+
+Our first approach to addressing this was to provide tools for expressing errors
+as AST nodes, and encouraging PPX authors to use these instead of exceptions.
+This practice was slow to creep into the ecosystem, so we made the behavior
+automatic by handling exceptions inside $ppxlib$. Now an exception raised by a
+context-free transformation is caught, and its error message is stored as an AST
+node so that the rest of the program can be transformed.
 
 \subsubsection*{Location invariants}
 
