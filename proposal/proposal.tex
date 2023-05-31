@@ -293,24 +293,24 @@ called $Ast\_builder$ and $Ast\_pattern$. That used to be unstable since the
 modules are automatically generated. Good news: since $ppxlib.0.26.0 $ (2022),
 we keep them manually stable!
 
-helper modules called $Ast\_builder$ and $Ast\_pattern$
-
-, such as:
-\begin{enumerate}
-\item\label{direct}
-Very low-level: directly handling the original data type.
-\item\label{helpers}
-More high-level: using helper modules called $Ast\_builder$ and $Ast\_pattern$.
-\item\label{metaquot}
-High-level: using the PPX $metaquot$ that comes bundled with $ppxlib$ and
-(de-)constructs nodes by writing original OCaml syntax.
-\end{enumerate}
-
-\ref{direct}. is unstable by the unstable parsetree nature. \ref{metaquot}. is stable due to
-the OCaml syntax being backward compatible. And \ref{helpers}. used to be
-unstable due to being automatically generated; however, since $ppxlib.0.26.0 $
-(2022), we keep them manually stable. When possible, we recommend
-avoiding \ref{direct}.
+%helper modules called $Ast\_builder$ and $Ast\_pattern$
+%
+%, such as:
+%\begin{enumerate}
+%\item\label{direct}
+%Very low-level: directly handling the original data type.
+%\item\label{helpers}
+%More high-level: using helper modules called $Ast\_builder$ and $Ast\_pattern$.
+%\item\label{metaquot}
+%High-level: using the PPX $metaquot$ that comes bundled with $ppxlib$ and
+%(de-)constructs nodes by writing original OCaml syntax.
+%\end{enumerate}
+%
+%\ref{direct}. is unstable by the unstable parsetree nature. \ref{metaquot}. is stable due to
+%the OCaml syntax being backward compatible. And \ref{helpers}. used to be
+%unstable due to being automatically generated; however, since $ppxlib.0.26.0 $
+%(2022), we keep them manually stable. When possible, we recommend
+%avoiding \ref{direct}.
 
 \subsubsection*{Patch each PPX in case of breakage}
 
