@@ -140,8 +140,6 @@ source \xrightarrow{\text{parsing}} AST \xrightarrow{\text{PPXs}}\\
 
 To extend the nodes, PPXs need to manipulate the AST data type. Changes to the
 AST data type would often break PPXes that depended on a previous form.
-% ceastlund: I don't know of earlier workarounds. I don't think _every_ ppx broke on
-% _every_ version, but the problem accelerated over time.
 
 To improve cross-compiler-version compatibility, $ocaml\mbox{-}migrate\mbox{-}parsetree$
 (OMP)\cite{omp} was invented. It converts the compiler AST version to the
@@ -242,8 +240,6 @@ The \emph{Location} of a AST node reveals which part of the source code the node
 corresponds to. We've run into some problems with transformed code, wherein
 tools like $merlin$ cannot figure out which piece of transformed or duplicated
 code to analyze when the user queries the source program.
-%Locations are very important for the compiler/$merlin$ to point to the right
-%place when reporting errors/warnings.
 
 To resolve this issue, we've instituted two location invariants for the results
 of PPX transformations. These can be configured in the $ppxlib$ driver as
@@ -288,10 +284,6 @@ interface. For example, the $ppx \_ expect$ PPX uses the name
 \texttt{Expect\_test\_config} non-hygienically. Users may shadow this module
 name to reconfigure expect tests.
 
-%\subsubsection{Quoting of injected values}
-%
-%(What do you think Carl and Paul-Elliot? Should we also mention quoting here?)
-
 \subsection{Stability}\label{stability}
 
 Additionally to being hygienic, we also want our PPX ecosystem to stay
@@ -310,25 +302,6 @@ being backward compatible. An intermediate approach is to use helper modules
 called \texttt{Ast\_builder} and \texttt{Ast\_pattern}. That used to be unstable
 since the modules are automatically generated. Good news: since $ppxlib.0.26.0$
 (2022), we keep them manually stable!
-
-%helper modules called $Ast\_builder$ and $Ast\_pattern$
-%
-%, such as:
-%\begin{enumerate}
-%\item\label{direct}
-%Very low-level: directly handling the original data type.
-%\item\label{helpers}
-%More high-level: using helper modules called $Ast\_builder$ and $Ast\_pattern$.
-%\item\label{metaquot}
-%High-level: using the PPX $metaquot$ that comes bundled with $ppxlib$ and
-%(de-)constructs nodes by writing original OCaml syntax.
-%\end{enumerate}
-%
-%\ref{direct}. is unstable by the unstable parsetree nature. \ref{metaquot}. is stable due to
-%the OCaml syntax being backward compatible. And \ref{helpers}. used to be
-%unstable due to being automatically generated; however, since $ppxlib.0.26.0 $
-%(2022), we keep them manually stable. When possible, we recommend
-%avoiding \ref{direct}.
 
 \subsubsection*{Patch each PPX in case of breakage}
 
