@@ -136,7 +136,8 @@ To extend the nodes, PPXs need to manipulate the AST data type. Changes to the
 AST data type would often break PPXes that depended on a previous form.
 
 To improve cross-compiler-version compatibility,
-$ocaml\mbox{-}migrate\mbox{-}parsetree$ (OMP) was invented. It converts the
+$ocaml\mbox{-}migrate\mbox{-}parsetree$ (OMP) was invented in 2017.
+It converts the
 compiler AST version to the version used by the PPX, then applies the PPX, and
 then converts back. Downward conversions are only well-defined if the AST
 doesn't contain new features/nodes. So full cross-compiler-version compatibility
@@ -161,11 +162,10 @@ This proved too complex and was subsequently abandoned. We now
 approach \hyperref[stability]{stability} with a combination of technical and
 social solutions.
 
-\subsection{Typedtree based}
+\subsection{MetaOCaml}
 
-There have also been efforts to introduce typedtree based meta-programming,
-especially $MetaOCaml$. MetaOCaml and PPXes are different notions of
-metaprogramming with different goals and expressivity. MetaOCaml is type-safe,
+Another tool for meta-programming is $MetaOCaml$. Its notion of meta-programming
+is different with different goals and expressivity. MetaOCaml is type-safe,
 staged metaprogramming that can be used to specialize values at compile-time or
 run-time; it is built on a fork of the OCaml compiler. PPXes offer more general
 code generation than specializing values, but lack MetaOCaml's ability to
@@ -176,7 +176,7 @@ evaluate the code and its integration with the type system.
 PPX machinery and the $ppxlib$ library have become the standard tool for OCaml
 meta-programming. They allow arbitrary AST rewriting in general, and streamlined
 special cases for context-free rewriting at extension nodes as well as derived
-code at types and module type definitions. The deriver links together multiple
+code at types and module type definitions. The driver links together multiple
 rewriters into one binary, executing all derivers and context-free rewriting in
 a single pass over an AST.
 
@@ -212,15 +212,14 @@ possible location, and allow the rest of rewriting to proceed.
 \subsubsection*{Location invariants}
 
 The location annotated on an AST node is used by tools like $merlin$ to associate
-the final AST with source code. This can get confusing when locations are duplicated
-during transformation. Our hygiene guidelines come in two parts: invariants to ensure
-tools can find a unique node for a location, and tools for satifying the invariants.
+the final AST with source code. That relies on two invariants:
+An AST node's location must contain the location of its child node;
+sibling nodes' locations must not overlap.
 
-Every AST node's location must contain the locations of its child nodes. Sibling
-nodes' locations must not overlap. These are the invariants. To help satisfy
-them, a location may be annotated as a ``ghost'' when it is a duplicate. Ghost
-locations are ignored for purposes of invariants, and for tools like $merlin$
-when performing a location-based lookup.
+To help satisfy them, a location may be annotated as a ``ghost''
+when it is a duplicate. Ghost locations are ignored for purposes of invariants,
+and for tools like $merlin$ when performing a location-based lookup. On demand,
+$ppxlib$ can verify whether the invariants are satisfied.
 
 \subsubsection*{Full qualification of identifiers and operators}
 
