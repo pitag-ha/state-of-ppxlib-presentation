@@ -232,7 +232,9 @@ as AST nodes, and encouraging PPX authors to use these instead of exceptions.
 This practice was slow to creep into the ecosystem, so we made the behavior
 automatic by handling exceptions inside $ppxlib$. Now an exception raised by a
 context-free transformation is caught, and its error message is stored as an AST
-node so that the rest of the program can be transformed.
+node inside the last AST of the rewriting process. So a raising PPX still means that
+the rewriting flow is interrupted, and the `ppxlib` driver returns a partly rewritten
+AST. Therefore, we still encourage PPX authors to embed errors instead of raising.
 
 \subsubsection*{Location invariants}
 
