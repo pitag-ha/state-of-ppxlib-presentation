@@ -116,7 +116,7 @@ facilities.
 \subsection{Source-code based}
 
 The initial approach was source-code focused. It worked by extending the parser
-to one's needs \cite{camlp4}:
+to one's needs:
 
 \begin{align*}
 source \xrightarrow[\text{parsing}]{\text{extended}} parsetree \xrightarrow{\text{typing}} typedtree
@@ -130,7 +130,7 @@ grammar was a huge maintenance burden.
 
 That's why in 2014 the approach became parsetree (\emph{AST} from now on)
 focused with $ocaml.4.02.00$. The AST was augmented by two meta-programming
-dedicated nodes \cite{extension_nodes}\cite{attributes}. Meta-programming tools,
+dedicated nodes. Meta-programming tools,
 called PPXs, extend those nodes to other nodes:
 
 \begin{gather*}
@@ -142,7 +142,7 @@ To extend the nodes, PPXs need to manipulate the AST data type. Changes to the
 AST data type would often break PPXes that depended on a previous form.
 
 To improve cross-compiler-version compatibility, $ocaml\mbox{-}migrate\mbox{-}parsetree$
-(OMP)\cite{omp} was invented. It converts the compiler AST version to the
+(OMP) was invented. It converts the compiler AST version to the
 version used by the PPX, then applies the PPX, and then converts back. However,
 downward conversions are only well-defined if the AST doesn't contain new
 features/nodes. So full cross-compiler-version compatibility is only given if
@@ -155,14 +155,14 @@ Initially, each PPX was a separate binary. The one early exception was $ppx \_
 deriving$, which orchestrates multiple type-based derivers into a single
 rewriter.
 
-In 2018, $ppxlib$\cite{ppxlib} was created, in part to solve these problems. It
+In 2018, $ppxlib$ was created, in part to solve these problems. It
 exposes a single version of the AST, which is kept up to date with the latest
 compiler. This consolidates
 the PPX ecosystem and upgrades most PPXes ``for free''.
 
 The primary remaining problem is the few PPXes that get broken each time the AST
 changes. Our initial proposal, presented at the OCaml workshop
-2019\cite{workshop2019}, was to create a single AST that could contain fragments
+2019, was to create a single AST that could contain fragments
 from multiple versions at once. This proved too complex and was subsequently
 abandoned. We now approach \hyperref[stability]{stability} with a combination of
 technical and social solutions.
@@ -170,7 +170,7 @@ technical and social solutions.
 \subsection{Typedtree based}
 
 There have also been efforts to introduce typedtree based meta-programming,
-especially $MetaOCaml$\cite{metaocaml}. MetaOCaml and PPXes are different
+especially $MetaOCaml$. MetaOCaml and PPXes are different
 notions of metaprogramming with different goals and expressivity. MetaOCaml is
 type-safe, staged metaprogramming that can be used to specialize values at
 compile-time or run-time. PPXes offer more general code generation than
@@ -210,12 +210,12 @@ that might affect, or be affected by, their context.
 Point \ref{responsibility}. above touches on an important topic: PPXs generate
 the final representation of the program and so have an impact on how the
 compiler and the editor tool $merlin$ analyze the program. That's why we define
-clear hygiene rules\cite{hygiene} and try to create a culture in which PPX
+clear hygiene rules and try to create a culture in which PPX
 authors are aware of the possible consequences. Some of these hygiene rules are
 enforced technically by $ppxlib$, and others are currently only guidelines that
 PPX authors should follow. The PPX mechanism within the compiler itself does not
 enforce any technical notion of hygiene as in some macro
-systems\cite{scheme_hygiene}.
+systems.
 
 \subsubsection*{Error handling}
 
@@ -307,62 +307,8 @@ since the modules are automatically generated. Good news: since $ppxlib.0.26.0$
 
 Even with that, there are still a few PPXs that break. Therefore, when bumping
 the AST, we create a big workspace containing all PPXs released on $opam$
-(fulfilling a few standards), called the $ppx\_universe$\cite{universe}. We then
+(fulfilling a few standards), called the $ppx\_universe$. We then
 quickly patch the broken PPXs in the universe and open PRs. The few affected PPX
 maintainers only need to review, merge and release.
-
-%%%%%%%%%%%%%%
-% References %
-%%%%%%%%%%%%%%
-
-\nocite{*}
-\bibliographystyle{plain}
-\bibliography{references}
-
-\end{document}
-
-\documentclass[12pt, a4paper, twocolumn]{article}
-\usepackage{xurl}
-\usepackage[super,comma,sort&compress]{natbib}
-\usepackage{abstract}
-\renewcommand{\abstractnamefont}{\normalfont\bfseries}
-\renewcommand{\abstracttextfont}{\normalfont\small\itshape}
-\usepackage{lipsum}
-
-%%%%%%%%%%%%%%
-% References %
-%%%%%%%%%%%%%%
-
-% If changing the name of the bib file, change \bibliography{test} at the bottom
-\begin{filecontents}{references.bib}
-
-@misc{camlp4,
-  title        = "Link Title",
-  author       = "Link Creator(s)",
-  howpublished = "\url{https://example.com/}",
-}
-
-@misc{Author1,
-  author       = "LastName, FirstName",
-  howpublished = "\url{mailto:email@example.com}",
-}
-
-@article{ArticleReference1,
-  author  = "Lastname1, Firstname1 and Lastname2, Firstname2",
-  title   = "Article title",
-  year    = "Year",
-  journal = "Journal name",
-  note    = "\url{https://dx.doi.org/...}",
-}
-
-\end{filecontents}
-
-% Any configuration that should be done before the end of the preamble:
-\usepackage{hyperref}
-\hypersetup{colorlinks=true, urlcolor=blue, linkcolor=blue, citecolor=blue}
-
-\nocite{*}
-\bibliographystyle{plain}
-\bibliography{test}
 
 \end{document}
