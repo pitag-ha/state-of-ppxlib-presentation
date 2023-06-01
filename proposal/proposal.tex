@@ -253,6 +253,8 @@ automatic checks, or left to PPX authors to enforce.
 \item The locations of sibling nodes don't overlap.
 \end{itemize}
 
+It is also possible to escape those invariants by using "ghost locations". Using ghost locations for nodes that borrow their location to another node is a good practice, to avoid confusing Merlin.
+
 \subsubsection*{Full qualification of identifiers and operators}
 
 A PPX needs to be independent of the semantic context it's applied in. This
