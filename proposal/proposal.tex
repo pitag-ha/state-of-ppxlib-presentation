@@ -3,18 +3,15 @@
 \author{Paul-Elliot Anglès d'Auriac, Carl Eastlund, Sonja Heinze}
 
 \newcommand{\abstractText}{\noindent
-About nine years ago, the OCaml community let go of the "maintenance hell" of
-source code meta-programming (Camlp4/5). Since then, meta-programming is mostly
-done on the parsetree and has incrementally evolved into a solid ecosystem,
-enriching the OCaml developer experience. Two highlights of that evolvement:
-introducing parsetree migrations to gain individual cross-compiler-version compatibility
-(OMP); and orchestrating those migrations to create an up-to-date ecosystem with
-clear composition semantics and good performance (ppxlib).
-
-In this talk, we outline the mentioned evolvement and explain the remaining
-challenges, i.e. creating a good higienic meta-programming culture and offering
-the best in terms of stability. }
-
+Nine years ago, the OCaml community let go of the "maintenance hell" of source
+code meta-programming. Now meta-programming is done on the parsetree and has
+evolved into a stable ecosystem. Two highlights of that evolvement: introducing
+parsetree migrations to gain cross-compiler-version compatibility (OMP); and
+orchestrating those migrations to create an up-to-date ecosystem with clear
+composition semantics and good performance (ppxlib). In this talk, we outline
+the evolution of this ecosystem and its remaining challenges: guidelines for
+hygienic meta-programming, and stability across compiler updates.
+}
 
 %%%%%%%%%%%%%%%%%
 % Configuration %
@@ -90,10 +87,9 @@ frametitleaboveskip=\dimexpr-\ht\strutbox\relax
 %%%%%%%%%%%
 
 \section{Introduction}
-Meta-programming enhances the programming language experience by opening the
-door to features such as boilerplate generation, conditional compilation,
-domain-specific syntax extensions, or generated file inclusion. It can be done
-on any representation of the program.
+Meta-programming opens the door to boilerplate generation, conditional
+compilation, domain-specific syntax extensions, and generated file inclusion. It
+can be done on any representation of the program.
 
 As a statically typed language, OCaml successively constructs two in-memory
 representations of the raw representation, i.e. the source-code.
@@ -104,19 +100,17 @@ source \xrightarrow{\text{parsing}} parsetree \xrightarrow{\text{typing}} typedt
 
 Nowadays, the clear standard for OCaml meta-programming is parsetree focused and
 is done via a compiler-external package called $ppxlib$. As of today, $\sim2000$
-OCaml packages out of $\sim4200$ OCaml packages in total (on $opam$) depend
-transitively on $ppxlib$.
+OCaml packages out of $\sim4200$ OCaml packages on $opam$ depend on $ppxlib$.
 
 \section{Historic overview}
 
 On the way to that standard, we've had a long history of OCaml meta-programming
 facilities.
 
-
 \subsection{Source-code based}
 
 The initial approach was source-code focused. It worked by extending the parser
-to one's needs \cite{camlp4}:
+to one's needs:
 
 \begin{align*}
 source \xrightarrow[\text{parsing}]{\text{extended}} parsetree \xrightarrow{\text{typing}} typedtree
@@ -130,8 +124,8 @@ grammar was a huge maintenance burden.
 
 That's why in 2014 the approach became parsetree (\emph{AST} from now on)
 focused with $ocaml.4.02.00$. The AST was augmented by two meta-programming
-dedicated nodes \cite{extension_nodes}\cite{attributes}. Meta-programming tools,
-called PPXs, extend those nodes to other nodes:
+dedicated nodes. Meta-programming tools, called PPXs, extend those nodes to
+other nodes:
 
 \begin{gather*}
 source \xrightarrow{\text{parsing}} AST \xrightarrow{\text{PPXs}}\\
@@ -140,14 +134,13 @@ source \xrightarrow{\text{parsing}} AST \xrightarrow{\text{PPXs}}\\
 
 To extend the nodes, PPXs need to manipulate the AST data type. Changes to the
 AST data type would often break PPXes that depended on a previous form.
-% ceastlund: I don't know of earlier workarounds. I don't think _every_ ppx broke on
-% _every_ version, but the problem accelerated over time.
 
-To improve cross-compiler-version compatibility, $ocaml\mbox{-}migrate\mbox{-}parsetree$
-(OMP)\cite{omp} was invented. It converts the compiler AST version to the
-version used by the PPX, then applies the PPX, and then converts back. However,
-downward conversions are only well-defined if the AST doesn't contain new
-features/nodes. So full cross-compiler-version compatibility is only given if
+To improve cross-compiler-version compatibility,
+$ocaml\mbox{-}migrate\mbox{-}parsetree$ (OMP) was invented. It converts the
+compiler AST version to the version used by the PPX, then applies the PPX, and
+then converts back. Downward conversions are only well-defined if the AST
+doesn't contain new features/nodes. So full cross-compiler-version compatibility
+is only given if
 \begin{align*}
 \text{PPX\ AST\ version} >= \text{compiler\ AST\ version}
 \end{align*}
@@ -157,28 +150,26 @@ Initially, each PPX was a separate binary. The one early exception was $ppx \_
 deriving$, which orchestrates multiple type-based derivers into a single
 rewriter.
 
-In 2018, $ppxlib$\cite{ppxlib} was created, in part to solve these problems. It
-exposes a single version of the AST, which is kept up to date with the latest
-compiler. This consolidates
-the PPX ecosystem and upgrades most PPXes ``for free''.
+In 2018, $ppxlib$ was created, in part to solve these problems. It exposes a
+single version of the AST, which is kept up to date with the latest compiler.
+This consolidates the PPX ecosystem and upgrades most PPXes ``for free''.
 
 The primary remaining problem is the few PPXes that get broken each time the AST
-changes. Our initial proposal, presented at the OCaml workshop
-2019\cite{workshop2019}, was to create a single AST that could contain fragments
-from multiple versions at once. This proved too complex and was subsequently
-abandoned. We now approach \hyperref[stability]{stability} with a combination of
-technical and social solutions.
+changes. Our initial proposal, presented at the OCaml workshop 2019, was to
+create a single AST that could contain fragments from multiple versions at once.
+This proved too complex and was subsequently abandoned. We now
+approach \hyperref[stability]{stability} with a combination of technical and
+social solutions.
 
 \subsection{Typedtree based}
 
 There have also been efforts to introduce typedtree based meta-programming,
-especially $MetaOCaml$\cite{metaocaml}. MetaOCaml and PPXes are different
-notions of metaprogramming with different goals and expressivity. MetaOCaml is
-type-safe, staged metaprogramming that can be used to specialize values at
-compile-time or run-time. PPXes offer more general code generation than
-specializing values, but lack MetaOCaml's ability to evaluate the code and its
-integration with the type system. MetaOCaml requires non-merged changes
-to the compiler and therefore only works on a fork of OCaml.
+especially $MetaOCaml$. MetaOCaml and PPXes are different notions of
+metaprogramming with different goals and expressivity. MetaOCaml is type-safe,
+staged metaprogramming that can be used to specialize values at compile-time or
+run-time; it is built on a fork of the OCaml compiler. PPXes offer more general
+code generation than specializing values, but lack MetaOCaml's ability to
+evaluate the code and its integration with the type system.
 
 \section{Current Situation}
 
@@ -188,12 +179,6 @@ special cases for context-free rewriting at extension nodes as well as derived
 code at types and module type definitions. The deriver links together multiple
 rewriters into one binary, executing all derivers and context-free rewriting in
 a single pass over an AST.
-
-\vspace{20pt}
-
-(visualization)
-
-\vspace{25pt}
 
 Context-free transformations have three big advantages over more general rewriting:
 \begin{enumerate}
@@ -211,49 +196,31 @@ that might affect, or be affected by, their context.
 
 Point \ref{responsibility}. above touches on an important topic: PPXs generate
 the final representation of the program and so have an impact on how the
-compiler and the editor tool $merlin$ analyze the program. That's why we define
-clear hygiene rules\cite{hygiene} and try to create a culture in which PPX
-authors are aware of the possible consequences. Some of these hygiene rules are
-enforced technically by $ppxlib$, and others are currently only guidelines that
-PPX authors should follow. The PPX mechanism within the compiler itself does not
-enforce any technical notion of hygiene as in some macro
-systems\cite{scheme_hygiene}.
+compiler and the editor tool $merlin$ interpret the program. Over time we have
+developed hygiene guidelines for creating PPXes that ``play nicely'' within the
+ecosystem.
 
 \subsubsection*{Error handling}
 
-Errors in OCaml are most often handled by raising exceptions. Naive error
-handling within the $ppxlib$ driver would abort transformation of an entire
-program the first time an exception was raised. This means tools like $merlin$
-learn nothing about the shape of the transformed program, and debugging the
-problem becomes only more difficult.
-
-Our first approach to addressing this was to provide tools for expressing errors
-as AST nodes, and encouraging PPX authors to use these instead of exceptions.
-This practice was slow to creep into the ecosystem, so we made the behavior
-automatic by handling exceptions inside $ppxlib$. Now an exception raised by a
-context-free transformation is caught, and its error message is stored as an AST
-node inside the last AST of the rewriting process. So a raising PPX still means that
-the rewriting flow is interrupted, and the `ppxlib` driver returns a partly rewritten
-AST. Therefore, we still encourage PPX authors to embed errors instead of raising.
+Exceptions abort the transformation of a program. This leads to tools like $merlin$
+having no output program to analyze. As a result, we have changed $ppxlib$ to
+catch exceptions during rewriting, and render their message as
+an \texttt{ocaml.error} node in the final AST. We encourage PPX authors to
+express errors as AST nodes directly so that they can occur in the most specific
+possible location, and allow the rest of rewriting to proceed.
 
 \subsubsection*{Location invariants}
 
-The \emph{Location} of a AST node reveals which part of the source code the node
-corresponds to. We've run into some problems with transformed code, wherein
-tools like $merlin$ cannot figure out which piece of transformed or duplicated
-code to analyze when the user queries the source program.
-%Locations are very important for the compiler/$merlin$ to point to the right
-%place when reporting errors/warnings.
+The location annotated on an AST node is used by tools like $merlin$ to associate
+the final AST with source code. This can get confusing when locations are duplicated
+during transformation. Our hygiene guidelines come in two parts: invariants to ensure
+tools can find a unique node for a location, and tools for satifying the invariants.
 
-To resolve this issue, we've instituted two location invariants for the results
-of PPX transformations. These can be configured in the $ppxlib$ driver as
-automatic checks, or left to PPX authors to enforce.
-\begin{itemize}
-\item The locations of child nodes are contained by the locations of their parents.
-\item The locations of sibling nodes don't overlap.
-\end{itemize}
-
-It is also possible to escape those invariants by using "ghost locations". Using ghost locations for nodes that borrow their location to another node is a good practice, to avoid confusing Merlin.
+Every AST node's location must contain the locations of its child nodes. Sibling
+nodes' locations must not overlap. These are the invariants. To help satisfy
+them, a location may be annotated as a ``ghost'' when it is a duplicate. Ghost
+locations are ignored for purposes of invariants, and for tools like $merlin$
+when performing a location-based lookup.
 
 \subsubsection*{Full qualification of identifiers and operators}
 
@@ -283,15 +250,6 @@ If your PPX relies on definitions that don't form part of the \texttt{Stdlib},
 the standard practice is to mint a runtime module for your PPX, give it an
 explicit name such as \texttt{Ppx\_example\_runtime\_lib}.
 
-This property can be selectively ignored to create a deliberately non-hygienic
-interface. For example, the $ppx \_ expect$ PPX uses the name
-\texttt{Expect\_test\_config} non-hygienically. Users may shadow this module
-name to reconfigure expect tests.
-
-%\subsubsection{Quoting of injected values}
-%
-%(What do you think Carl and Paul-Elliot? Should we also mention quoting here?)
-
 \subsection{Stability}\label{stability}
 
 Additionally to being hygienic, we also want our PPX ecosystem to stay
@@ -311,85 +269,12 @@ called \texttt{Ast\_builder} and \texttt{Ast\_pattern}. That used to be unstable
 since the modules are automatically generated. Good news: since $ppxlib.0.26.0$
 (2022), we keep them manually stable!
 
-%helper modules called $Ast\_builder$ and $Ast\_pattern$
-%
-%, such as:
-%\begin{enumerate}
-%\item\label{direct}
-%Very low-level: directly handling the original data type.
-%\item\label{helpers}
-%More high-level: using helper modules called $Ast\_builder$ and $Ast\_pattern$.
-%\item\label{metaquot}
-%High-level: using the PPX $metaquot$ that comes bundled with $ppxlib$ and
-%(de-)constructs nodes by writing original OCaml syntax.
-%\end{enumerate}
-%
-%\ref{direct}. is unstable by the unstable parsetree nature. \ref{metaquot}. is stable due to
-%the OCaml syntax being backward compatible. And \ref{helpers}. used to be
-%unstable due to being automatically generated; however, since $ppxlib.0.26.0 $
-%(2022), we keep them manually stable. When possible, we recommend
-%avoiding \ref{direct}.
-
 \subsubsection*{Patch each PPX in case of breakage}
 
 Even with that, there are still a few PPXs that break. Therefore, when bumping
 the AST, we create a big workspace containing all PPXs released on $opam$
-(fulfilling a few standards), called the $ppx\_universe$\cite{universe}. We then
+(fulfilling a few standards), called the $ppx\_universe$. We then
 quickly patch the broken PPXs in the universe and open PRs. The few affected PPX
 maintainers only need to review, merge and release.
-
-%%%%%%%%%%%%%%
-% References %
-%%%%%%%%%%%%%%
-
-\nocite{*}
-\bibliographystyle{plain}
-\bibliography{references}
-
-\end{document}
-
-\documentclass[12pt, a4paper, twocolumn]{article}
-\usepackage{xurl}
-\usepackage[super,comma,sort&compress]{natbib}
-\usepackage{abstract}
-\renewcommand{\abstractnamefont}{\normalfont\bfseries}
-\renewcommand{\abstracttextfont}{\normalfont\small\itshape}
-\usepackage{lipsum}
-
-%%%%%%%%%%%%%%
-% References %
-%%%%%%%%%%%%%%
-
-% If changing the name of the bib file, change \bibliography{test} at the bottom
-\begin{filecontents}{references.bib}
-
-@misc{camlp4,
-  title        = "Link Title",
-  author       = "Link Creator(s)",
-  howpublished = "\url{https://example.com/}",
-}
-
-@misc{Author1,
-  author       = "LastName, FirstName",
-  howpublished = "\url{mailto:email@example.com}",
-}
-
-@article{ArticleReference1,
-  author  = "Lastname1, Firstname1 and Lastname2, Firstname2",
-  title   = "Article title",
-  year    = "Year",
-  journal = "Journal name",
-  note    = "\url{https://dx.doi.org/...}",
-}
-
-\end{filecontents}
-
-% Any configuration that should be done before the end of the preamble:
-\usepackage{hyperref}
-\hypersetup{colorlinks=true, urlcolor=blue, linkcolor=blue, citecolor=blue}
-
-\nocite{*}
-\bibliographystyle{plain}
-\bibliography{test}
 
 \end{document}
