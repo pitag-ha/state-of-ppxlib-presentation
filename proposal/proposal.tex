@@ -147,7 +147,7 @@ To improve cross-compiler-version compatibility, $ocaml\mbox{-}migrate\mbox{-}pa
 (OMP)\cite{omp} was invented. It converts the compiler AST version to the
 version used by the PPX, then applies the PPX, and then converts back. However,
 downward conversions are only well-defined if the AST doesn't contain new
-features/nodes. So full cross-version compatibility is only given if
+features/nodes. So full cross-compiler-version compatibility is only given if
 \begin{align*}
 \text{PPX\ AST\ version} >= \text{compiler\ AST\ version}
 \end{align*}
