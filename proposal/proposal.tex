@@ -201,7 +201,7 @@ ecosystem.
 
 \subsubsection*{Error handling}
 
-Errors abort the transformation of a program. This leads to tools like $merlin$
+Exceptions abort the transformation of a program. This leads to tools like $merlin$
 having no output program to analyze. As a result, we have changed $ppxlib$ to
 catch exceptions during rewriting, and render their message as
 an \texttt{ocaml.error} node in the final AST. We encourage PPX authors to
