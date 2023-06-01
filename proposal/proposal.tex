@@ -143,7 +143,7 @@ AST data type would often break PPXes that depended on a previous form.
 % ceastlund: I don't know of earlier workarounds. I don't think _every_ ppx broke on
 % _every_ version, but the problem accelerated over time.
 
-To improve cross-version compatibility, $ocaml\mbox{-}migrate\mbox{-}parsetree$
+To improve cross-compiler-version compatibility, $ocaml\mbox{-}migrate\mbox{-}parsetree$
 (OMP)\cite{omp} was invented. It converts the compiler AST version to the
 version used by the PPX, then applies the PPX, and then converts back. However,
 downward conversions are only well-defined if the AST doesn't contain new
